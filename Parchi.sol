@@ -44,25 +44,32 @@ contract ParchiThap {
     uint8 horizontalAmountLeft = 4; // horizontal amount
     uint8[4] memory verticalAmountsLeft = [4, 4, 4, 4]; // vertical sum
 
-    bool[4] memory columnFull = [false, false, false, false];
+    // bool[4] memory columnFull = [false, false, false, false];
 
     uint8[4] memory randoms = [0, 0, 0, 0];
     uint8[4][4] memory newGameState;
     uint8 randomNumber;
 
-    // Generate array of 4 arrays
-    for (uint256 j = 0; j < 4; ++j) {
-      // Generate an array of 4 numbers
-      for (uint256 i = 0; i < 4; ++i) {
-        // randomNumber = uint8(uint256(keccak256(abi.encode(i, j, gasleft(), tx.gasprice))));
-        randomNumber = uint8(uint256(keccak256(abi.encode(i, j, randomCounter))));
-        randomNumber = randomNumber == 0 ? 0 : randomNumber % 5;
-
-        // On last iteration force the only value left.
-        if (i == 3) {
-          randoms[i] = horizontalAmountLeft;
+    for (uint256 j; j < 4; ++j) {
+      for (uint256 i; i < 4; ++i) {
+        if (j == 3) {
+          randoms = verticalAmountsLeft;
+          newGameState[j] = randoms;
           break;
         }
+
+        randomNumber = uint8(uint256(keccak256(abi.encode(i, j, gasleft(), block.timestamp))) % 5);
+
+        // if next columns are full
+        if (i != 3 && verticalAmountsLeft[i + 1] == 0) {
+          randoms[i] = horizontalAmountLeft;
+        }
+
+        // // On last iteration force the only value left.
+        // if (i == 3) {
+        //   randoms[i] = horizontalAmountLeft;
+        //   break;
+        // }
 
         if (randomNumber <= horizontalAmountLeft) {
           if (randomNumber <= verticalAmountsLeft[i]) {
@@ -79,8 +86,6 @@ contract ParchiThap {
           verticalAmountsLeft[i] -= horizontalAmountLeft;
           horizontalAmountLeft = 0;
         }
-
-        // if (verticalAmountsLeft[i] == 0) columnFull[i] = true;
       }
       newGameState[j] = randoms;
 
