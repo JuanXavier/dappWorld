@@ -52,6 +52,7 @@ contract ParchiThap {
 
     for (uint256 j; j < 4; ++j) {
       for (uint256 i; i < 4; ++i) {
+        // On last iteration just fill the array with the remaining available
         if (j == 3) {
           randoms = verticalAmountsLeft;
           newGameState[j] = randoms;
@@ -60,38 +61,44 @@ contract ParchiThap {
 
         randomNumber = uint8(uint256(keccak256(abi.encode(i, j, gasleft(), block.timestamp))) % 5);
 
-        // if next columns are full
-        if (i != 3 && verticalAmountsLeft[i + 1] == 0) {
-          randoms[i] = horizontalAmountLeft;
-        }
-        if (j == 0 || j == 1) {}
-        if (randomNumber <= horizontalAmountLeft) {
-          if (randomNumber <= verticalAmountsLeft[i]) {
-            randoms[i] = randomNumber;
-            horizontalAmountLeft -= randomNumber;
-            verticalAmountsLeft[i] -= randomNumber;
+        if (j < 2) {
+          // If next column is full, then fill the array with the remaining available
+          if (i != 3 && verticalAmountsLeft[i + 1] == 0) randoms[i] = horizontalAmountLeft;
+
+          if (randomNumber <= horizontalAmountLeft) {
+            if (randomNumber <= verticalAmountsLeft[i]) {
+              randoms[i] = randomNumber;
+              horizontalAmountLeft -= randomNumber;
+              verticalAmountsLeft[i] -= randomNumber;
+            } else {
+              randoms[i] = verticalAmountsLeft[i];
+              horizontalAmountLeft -= verticalAmountsLeft[i];
+              verticalAmountsLeft[i] = 0;
+            }
+
+            if (i == 3) {
+              randoms[i] = horizontalAmountLeft;
+              horizontalAmountLeft = 0;
+            }
           } else {
-            randoms[i] = verticalAmountsLeft[i];
-            horizontalAmountLeft -= verticalAmountsLeft[i];
-            verticalAmountsLeft[i] = 0;
+            randoms[i] = horizontalAmountLeft;
+            verticalAmountsLeft[i] -= horizontalAmountLeft;
+            horizontalAmountLeft = 0;
           }
-
-          if (i == 3) randoms[i] = horizontalAmountLeft;
-        } else {
-          randoms[i] = horizontalAmountLeft;
-          verticalAmountsLeft[i] -= horizontalAmountLeft;
-          horizontalAmountLeft = 0;
         }
 
-        if (j == 2 && horizontalAmountLeft > 0) {
-          randoms[i] = verticalAmountsLeft[i];
-          horizontalAmountLeft -= verticalAmountsLeft[i];
-          verticalAmountsLeft[i] = 0;
+        if (j == 2) {
+          if (horizontalAmountLeft > 0) {
+            if (verticalAmountsLeft[i] >= horizontalAmountLeft) {
+              randoms[i] = horizontalAmountLeft;
+              verticalAmountsLeft[i] -= horizontalAmountLeft;
+              horizontalAmountLeft = 0;
+            }
+          }
         }
       }
 
-      // On last iteration force the only value left.
-
+      // Update the new state
       newGameState[j] = randoms;
 
       // Reset
