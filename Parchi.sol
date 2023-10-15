@@ -41,49 +41,53 @@ contract ParchiThap {
 
   // Should generatean array of 4 arrays the do not add 4 in each array and the all the indices are equal to 4 as well
   function _newGameState() public view returns (uint8[4][4] memory) {
-    uint8 horizontalAmountLeft = 4; // horizontal amount
-    uint8[4] memory verticalAmountsLeft = [4, 4, 4, 4]; // vertical sum
-
-    // bool[4] memory columnFull = [false, false, false, false];
-
-    uint8[4] memory randoms = [0, 0, 0, 0];
     uint8[4][4] memory newGameState;
     uint8 randomNumber;
 
+    uint8 horizontalAmountLeft = 4;
+    uint8[4] memory randoms = [0, 0, 0, 0];
+    uint8[4] memory verticalAmountsLeft = [4, 4, 4, 4];
+
     for (uint256 j; j < 4; ++j) {
       for (uint256 i; i < 4; ++i) {
-        // On last iteration just fill the array with the remaining available
-        if (j == 3) {
-          randoms = verticalAmountsLeft;
-          newGameState[j] = randoms;
-          break;
-        }
-
         randomNumber = uint8(uint256(keccak256(abi.encode(i, j, gasleft(), block.timestamp))) % 5);
 
         if (j < 2) {
-          // If next column is full, then fill the array with the remaining available
-          if (i != 3 && verticalAmountsLeft[i + 1] == 0) randoms[i] = horizontalAmountLeft;
-
-          if (randomNumber <= horizontalAmountLeft) {
-            if (randomNumber <= verticalAmountsLeft[i]) {
+          if (randomNumber < horizontalAmountLeft) {
+            if (randomNumber < verticalAmountsLeft[i]) {
               randoms[i] = randomNumber;
-              horizontalAmountLeft -= randomNumber;
-              verticalAmountsLeft[i] -= randomNumber;
+              horizontalAmountLeft -= randoms[i];
+              verticalAmountsLeft[i] -= randoms[i];
             } else {
-              randoms[i] = verticalAmountsLeft[i];
-              horizontalAmountLeft -= verticalAmountsLeft[i];
-              verticalAmountsLeft[i] = 0;
+              if (verticalAmountsLeft[i] <= horizontalAmountLeft) {
+                randoms[i] = verticalAmountsLeft[i];
+                horizontalAmountLeft -= randoms[i];
+                verticalAmountsLeft[i] = 0;
+              }
             }
+          } else {
+            // randoms[i] = horizontalAmountLeft;
+            // verticalAmountsLeft[i] -= horizontalAmountLeft;
+            // horizontalAmountLeft = 0;
 
             if (i == 3) {
               randoms[i] = horizontalAmountLeft;
               horizontalAmountLeft = 0;
             }
-          } else {
-            randoms[i] = horizontalAmountLeft;
-            verticalAmountsLeft[i] -= horizontalAmountLeft;
-            horizontalAmountLeft = 0;
+
+            if (i < 3 && verticalAmountsLeft[i + 1] == 0) {
+              randoms[i] = horizontalAmountLeft;
+              verticalAmountsLeft[i] -= randoms[i];
+              horizontalAmountLeft = 0;
+            }
+
+            if (i == 2) {
+              if (horizontalAmountLeft <= verticalAmountsLeft[i]) {
+                randoms[i] = horizontalAmountLeft;
+                verticalAmountsLeft[i] -= randoms[i];
+                horizontalAmountLeft = 0;
+              }
+            }
           }
         }
 
@@ -93,19 +97,23 @@ contract ParchiThap {
               randoms[i] = horizontalAmountLeft;
               verticalAmountsLeft[i] -= horizontalAmountLeft;
               horizontalAmountLeft = 0;
+            } else {
+              randoms[i] = verticalAmountsLeft[i];
+              horizontalAmountLeft -= randoms[i];
+              verticalAmountsLeft[i] = 0;
             }
           }
         }
+
+        // On last iteration just fill the array with the remaining available
+        if (j == 3) newGameState[j] = verticalAmountsLeft;
       }
+      /* ------------------- LOOP END ------------------- */
 
-      // Update the new state
       newGameState[j] = randoms;
-
-      // Reset
       randoms = [0, 0, 0, 0];
       horizontalAmountLeft = 4;
     }
-
     return newGameState;
   }
 
