@@ -119,21 +119,17 @@ contract ParchiThap {
   }
 
   function passParchi(uint8 _type) external {
-    unchecked {
-      uint8 _playerInTurnIndex = playerInTurnIndex;
-      if (msg.sender != players[_playerInTurnIndex]) revert();
+    uint8 _playerInTurnIndex = playerInTurnIndex;
+    if (msg.sender != players[_playerInTurnIndex]) revert();
 
-      uint8[4] memory playerParchis = gameState[_playerInTurnIndex];
+    uint8 nextPlayerInTurnIndex = (++_playerInTurnIndex) % 4;
 
-      uint8 nextPlayerInTurnIndex = (++_playerInTurnIndex) % 4;
+    if (gameState[_playerInTurnIndex][_type - 1] > 0) {
+      --gameState[_playerInTurnIndex][_type - 1];
+      ++gameState[nextPlayerInTurnIndex][_type - 1];
+    } else revert();
 
-      if (playerParchis[_type - 1] > 0) {
-        --gameState[_playerInTurnIndex][_type - 1];
-        ++gameState[nextPlayerInTurnIndex][_type - 1];
-      } else revert();
-
-      playerInTurnIndex = nextPlayerInTurnIndex;
-    }
+    playerInTurnIndex = nextPlayerInTurnIndex;
   }
 
   function claimWin() external {
