@@ -33,6 +33,15 @@ contract ParchiThap {
   }
 
   function _addPlayers(address[4] memory _players) public {
+    if (
+      _players[0] == _players[1] ||
+      _players[0] == _players[2] ||
+      _players[0] == _players[3] ||
+      _players[1] == _players[2] ||
+      _players[1] == _players[3] ||
+      _players[2] == _players[3]
+    ) revert();
+
     unchecked {
       for (uint256 i; i < 4; ++i) {
         if (_players[i] == address(0) || _players[i] == msg.sender) revert();
@@ -97,7 +106,6 @@ contract ParchiThap {
   /* ****************************************************** */
 
   function startGame(address p1, address p2, address p3, address p4) external {
-    if (p1 == p2 || p1 == p3 || p1 == p4) revert();
     _onlyOwner();
     _onlyInStatus(GameStatus.Inactive);
 
@@ -116,6 +124,7 @@ contract ParchiThap {
     _onlyInStatus(GameStatus.Inactive);
     _addPlayers(_players);
     _setState(_state);
+    gameStatus = GameStatus.Active;
   }
 
   function passParchi(uint8 _type) external {
@@ -136,13 +145,15 @@ contract ParchiThap {
       if (!_isPlayer(msg.sender)) revert();
       _onlyInStatus(GameStatus.Active);
       uint256 playerIndex = _getIndex();
+
       uint256 i = 4;
       while (i > 0) {
-        if (gameState[playerIndex][i] == 4) {
+        if (gameState[playerIndex][i - 1] == 4) {
           _resetGame();
           ++wins[msg.sender];
           return;
         }
+        --i;
       }
       revert();
     }
