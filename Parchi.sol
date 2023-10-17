@@ -7,21 +7,16 @@ enum GameStatus {
 }
 
 contract ParchiThap {
-  GameStatus public gameStatus;
+  GameStatus internal gameStatus;
   address private immutable OWNER;
-  uint96 public startTime;
-  uint256 internal randomCounter;
+  uint88 internal startTime;
+  uint8 playerInTurnIndex;
 
   address[4] public players;
   uint8[4][4] public gameState;
 
-  uint8 playerInTurnIndex;
-  mapping(address => bool) public isPlayer;
   mapping(address => uint256) private wins;
 
-  /* ****************************************************** */
-  /*                      INITIALIZERS                      */
-  /* ****************************************************** */
   function _onlyOwner() private view {
     if (msg.sender != OWNER) revert();
   }
@@ -32,120 +27,15 @@ contract ParchiThap {
 
   constructor() {
     OWNER = msg.sender;
-    randomCounter = block.timestamp;
-  }
-
-  /* ****************************************************** */
-  /*                         PRIVATE                        */
-  /* ****************************************************** */
-
-  // Should generatean array of 4 arrays the do not add 4 in each array and the all the indices are equal to 4 as well
-  function _newGameState() public view returns (uint8[4][4] memory) {
-    uint8[4][4] memory newGameState;
-    uint8 randomNumber;
-
-    uint8 horizontalAmountLeft = 4;
-    uint8[4] memory randoms = [0, 0, 0, 0];
-    uint8[4] memory verticalAmountsLeft = [4, 4, 4, 4];
-
-    for (uint256 j; j < 4; ++j) {
-      for (uint256 i; i < 4; ++i) {
-        randomNumber = uint8(uint256(keccak256(abi.encode(i, j, gasleft(), block.timestamp))) % 5);
-
-        if (j < 2) {
-          if (randomNumber < horizontalAmountLeft) {
-            if (randomNumber < verticalAmountsLeft[i]) {
-              randoms[i] = randomNumber;
-              horizontalAmountLeft -= randoms[i];
-              verticalAmountsLeft[i] -= randoms[i];
-            } else {
-              if (verticalAmountsLeft[i] <= horizontalAmountLeft) {
-                randoms[i] = verticalAmountsLeft[i];
-                horizontalAmountLeft -= randoms[i];
-                verticalAmountsLeft[i] = 0;
-              }
-            }
-          } else {
-            // randoms[i] = horizontalAmountLeft;
-            // verticalAmountsLeft[i] -= horizontalAmountLeft;
-            // horizontalAmountLeft = 0;
-
-            if (i == 3) {
-              randoms[i] = horizontalAmountLeft;
-              horizontalAmountLeft = 0;
-            }
-
-            if (i < 3 && verticalAmountsLeft[i + 1] == 0) {
-              randoms[i] = horizontalAmountLeft;
-              verticalAmountsLeft[i] -= randoms[i];
-              horizontalAmountLeft = 0;
-            }
-
-            if (i == 2) {
-              if (horizontalAmountLeft <= verticalAmountsLeft[i]) {
-                randoms[i] = horizontalAmountLeft;
-                verticalAmountsLeft[i] -= randoms[i];
-                horizontalAmountLeft = 0;
-              }
-            }
-          }
-        }
-
-        if (j == 2) {
-          if (horizontalAmountLeft > 0) {
-            if (verticalAmountsLeft[i] >= horizontalAmountLeft) {
-              randoms[i] = horizontalAmountLeft;
-              verticalAmountsLeft[i] -= horizontalAmountLeft;
-              horizontalAmountLeft = 0;
-            } else {
-              randoms[i] = verticalAmountsLeft[i];
-              horizontalAmountLeft -= randoms[i];
-              verticalAmountsLeft[i] = 0;
-            }
-          }
-        }
-
-        // On last iteration just fill the array with the remaining available
-        if (j == 3) newGameState[j] = verticalAmountsLeft;
-      }
-      /* ------------------- LOOP END ------------------- */
-
-      newGameState[j] = randoms;
-      randoms = [0, 0, 0, 0];
-      horizontalAmountLeft = 4;
-    }
-    return newGameState;
   }
 
   function _addPlayers(address[4] memory _players) private {
     unchecked {
       uint256 i = 4;
       while (i > 0) {
-        if (players[i] != address(0) && players[i] != msg.sender && !isPlayer[_players[i]]) {
-          isPlayer[_players[i]] = true;
-          players[i] = _players[i];
-        } else revert();
+        if (players[i] != address(0) && players[i] != msg.sender) players[i] = _players[i];
+        else revert();
         --i;
-      }
-    }
-  }
-
-  function _setState(uint8[4][4] calldata _state) private pure {
-    unchecked {
-      uint256 total;
-      uint256 i;
-
-      // Check for each vertical adding up to 4
-      for (; i < 4; ++i) {
-        total = _state[0][i] + _state[1][i] + _state[2][i] + _state[3][i];
-        if (total != 4) revert();
-      }
-
-      delete i;
-
-      // Check for horizontal adding up to 4
-      for (; i < 4; ++i) {
-        if (_addValuesInArray(_state[i]) != 4) revert();
       }
     }
   }
@@ -158,12 +48,40 @@ contract ParchiThap {
           break;
         }
       }
-      return index;
     }
   }
 
-  function _addValuesInArray(uint8[4] memory array) internal pure returns (uint256) {
-    return array[0] + array[1] + array[2] + array[3];
+  function _setState(uint8[4][4] memory _state) private pure {
+    unchecked {
+      uint256 total;
+      for (uint256 i; i < 4; ++i) {
+        total = _state[i][0] + _state[i][1] + _state[i][2] + _state[i][3];
+        if (total != 4) revert();
+        total = _state[0][i] + _state[1][i] + _state[2][i] + _state[3][i];
+        if (total != 4) revert();
+      }
+    }
+  }
+
+  function _newGameState() public view returns (uint8[4][4] memory _parchis) {
+    uint256 pos;
+    uint256 rand = uint256(keccak256(abi.encodePacked(block.timestamp)));
+    uint256 i;
+    uint[4] memory z;
+
+    unchecked {
+      while (i < 16) {
+        // i 0, rand 1234
+        if (((rand >> pos) & 1) == 1) {
+          uint a = pos % 4; // the whole loop would go {0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4}
+          while (z[a] == 4) a = ++a % 4; // if value is 4, change is to a value between 0 and 3
+          ++_parchis[a][i / 4]; // update horizontal values 0
+          ++z[a];
+          ++i;
+        }
+        ++pos;
+      }
+    }
   }
 
   /* ****************************************************** */
@@ -171,6 +89,7 @@ contract ParchiThap {
   /* ****************************************************** */
 
   function startGame(address p1, address p2, address p3, address p4) external {
+    if (p1 == p2 || p1 == p3 || p1 == p4) revert();
     _onlyOwner();
     _onlyInStatus(GameStatus.Inactive);
 
@@ -179,9 +98,9 @@ contract ParchiThap {
 
     gameStatus = GameStatus.Active;
     players = _players;
-    startTime = uint96(block.timestamp);
+    startTime = uint88(block.timestamp);
 
-    // todo distribute parchis generating 16 randdom numbers between 0 and 4
+    _setState(_newGameState());
   }
 
   function setState(address[4] calldata _players, uint8[4][4] calldata _state) external {
@@ -198,7 +117,7 @@ contract ParchiThap {
 
       uint8[4] memory playerParchis = gameState[_playerInTurnIndex];
 
-      uint8 nextPlayerInTurnIndex = (_playerInTurnIndex + 1) % 4;
+      uint8 nextPlayerInTurnIndex = (++_playerInTurnIndex) % 4;
 
       if (playerParchis[_type] > 0) {
         --gameState[_playerInTurnIndex][_type];
@@ -210,36 +129,49 @@ contract ParchiThap {
   }
 
   function endGame() public {
-    if (!isPlayer[msg.sender]) revert();
+    if (!isPlayer(msg.sender)) revert();
     if (block.timestamp < startTime + 1 hours) revert();
     _resetGame();
   }
 
   function claimWin() external {
-    if (!isPlayer[msg.sender]) revert();
-    uint256 playerIndex = _getIndex();
+    unchecked {
+      if (!isPlayer(msg.sender)) revert();
+      _onlyInStatus(GameStatus.Active);
+      uint256 playerIndex = _getIndex();
+      uint256 i = 4;
+      while (i > 0) {
+        if (gameState[playerIndex][i] == 4) {
+          _resetGame();
+          ++wins[msg.sender];
+          return;
+        }
+      }
+      revert();
+    }
+  }
 
-    for (uint256 i; i < 4; ++i) {
-      if (gameState[playerIndex][i] == 4) {
-        _resetGame();
-        ++wins[msg.sender];
-        return;
+  function isPlayer(address player) internal view returns (bool b) {
+    unchecked {
+      uint256 i = 4;
+
+      while (i > 0) {
+        b = player == players[i];
+        --i;
       }
     }
-
-    revert();
   }
 
   function _resetGame() internal {
-    delete playerInTurnIndex;
+    playerInTurnIndex = 0;
     delete players;
     delete gameState;
     gameStatus = GameStatus.Inactive;
   }
 
   function getState() external view returns (address[4] memory, address turn, uint8[4][4] memory) {
-    if (msg.sender != OWNER) revert();
-    if (gameStatus == GameStatus.Inactive) revert();
+    _onlyOwner();
+    _onlyInStatus(GameStatus.Active);
     return (players, players[playerInTurnIndex], gameState);
   }
 
@@ -249,11 +181,13 @@ contract ParchiThap {
 
   function myParchis() external view returns (uint8[4] memory) {
     unchecked {
-      if (!isPlayer[msg.sender]) revert();
-      if (gameStatus == GameStatus.Inactive) revert();
-
+      if (!isPlayer(msg.sender)) revert();
       uint256 index = _getIndex();
       return gameState[index];
     }
   }
 }
+// 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+// 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+// 0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB
+// 0x617F2E2fD72FD9D5503197092aC168c91465E7f2
