@@ -33,16 +33,15 @@ contract ParchiThap {
   }
 
   function _addPlayers(address[4] memory _players) public {
-    if (
-      _players[0] == _players[1] ||
-      _players[0] == _players[2] ||
-      _players[0] == _players[3] ||
-      _players[1] == _players[2] ||
-      _players[1] == _players[3] ||
-      _players[2] == _players[3]
-    ) revert();
-
     unchecked {
+      if (
+        _players[0] == _players[1] ||
+        _players[0] == _players[2] ||
+        _players[0] == _players[3] ||
+        _players[1] == _players[2] ||
+        _players[1] == _players[3] ||
+        _players[2] == _players[3]
+      ) revert();
       for (uint256 i; i < 4; ++i) {
         if (_players[i] == address(0) || _players[i] == msg.sender) revert();
         players[i] = _players[i];
@@ -61,16 +60,24 @@ contract ParchiThap {
     }
   }
 
-  function _setState(uint8[4][4] memory _state) private {
+  // player 1 should always have 4
+  /** this should pass[[1,1,0,1],[0,0,4,1],[2,1,0,1],[1,2,0,1]]) */
+  /** this should fail [[2,1,1,1],[0,1,1,1],[1,1,1,1],[1,1,1,1]]) */
+  function _setState(uint8[4][4] memory _state) public {
     unchecked {
       uint256 total;
       for (uint256 i; i < 4; ++i) {
+        // horizontal
         total = _state[i][0] + _state[i][1] + _state[i][2] + _state[i][3];
-        if (total != 4) revert();
+        if (total < 3 || total > 5) revert();
+        // vertical
         total = _state[0][i] + _state[1][i] + _state[2][i] + _state[3][i];
         if (total != 4) revert();
       }
       gameState = _state;
+      gameStatus = GameStatus.Active;
+
+      startTime = uint88(block.timestamp);
     }
   }
 
@@ -108,14 +115,7 @@ contract ParchiThap {
   function startGame(address p1, address p2, address p3, address p4) external {
     _onlyOwner();
     _onlyInStatus(GameStatus.Inactive);
-
-    address[4] memory _players = [p1, p2, p3, p4];
-    _addPlayers(_players);
-
-    gameStatus = GameStatus.Active;
-    players = _players;
-    startTime = uint88(block.timestamp);
-
+    _addPlayers([p1, p2, p3, p4]);
     _setState(_newGameState());
   }
 
@@ -124,7 +124,6 @@ contract ParchiThap {
     _onlyInStatus(GameStatus.Inactive);
     _addPlayers(_players);
     _setState(_state);
-    gameStatus = GameStatus.Active;
   }
 
   function passParchi(uint8 _type) external {
@@ -166,6 +165,7 @@ contract ParchiThap {
   }
 
   function getWins(address player) external view returns (uint256) {
+    if (player == address(0) || player == OWNER) revert();
     return wins[player];
   }
 
@@ -189,4 +189,4 @@ contract ParchiThap {
 // 0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB
 // 0x617F2E2fD72FD9D5503197092aC168c91465E7f2
 // ["0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2","0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db","0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB","0x617F2E2fD72FD9D5503197092aC168c91465E7f2"]
-//
+// [[1,1,0,1],[0,0,4,1],[2,1,0,1],[1,2,0,1]]
