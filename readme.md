@@ -1,4 +1,6 @@
-"16 Parchi Thap" is an enjoyable card game where four friends aim to collect four chits, called parchis, of the same type without revealing their hand to one another. They take turns passing chits, and the first to gather four of a kind wins the game!
+## 16 Parchi Thap
+
+is an enjoyable card game where four friends aim to collect four chits, called parchis, of the same type without revealing their hand to one another. They take turns passing chits, and the first to gather four of a kind wins the game!
 
 Rules of 16 Parchi Thap:
 
